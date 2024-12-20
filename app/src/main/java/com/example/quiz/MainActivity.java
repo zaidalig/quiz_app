@@ -1,366 +1,562 @@
+// app/src/main/java/com/example/quiz/MainActivity.java
 package com.example.quiz;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.Html;
+import android.os.CountDownTimer;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.RadioGroup;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.gson.annotations.SerializedName;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.http.GET;
+import retrofit2.http.Url;
+import retrofit2.*;
 
 public class MainActivity extends AppCompatActivity {
 
-    // UI Components
-    private Button startQuizBtn, restartQuizBtn, viewResultsBtn;
-    private Button option1, option2, option3, option4;
-    private TextView questionNumber, questionText, scoreText, finalScore, errorMessage;
+    // Layout References
+    private LinearLayout settingsLayout, quizLayout, resultLayout;
+    private Spinner spinnerCategory, spinnerDifficulty, spinnerQuizType, spinnerNumQuestions;
+    private Button buttonStart, buttonNext, buttonRestart;
+    private TextView textQuestion, textTimer, textQuestionCount, textScore, textDetailedResults;
     private ProgressBar progressBar;
-    private LinearLayout startScreen, questionScreen, endScreen;
-    private TextView previousResultsText;
+    private LinearLayout layoutOptions;
+    private RecyclerView recyclerViewHighScores;
 
-    // Quiz Data
-    private JSONArray questionsArray;
+    // Quiz State Variables
+    private List<QuizQuestion> questionsList;
     private int currentQuestionIndex = 0;
     private int score = 0;
+    private CountDownTimer countDownTimer;
+    private final long timePerQuestion = 30 * 1000; // 30 seconds
+    private String selectedQuizType = "multiple";
+    private int selectedNumQuestions = 10;
+    private List<String> userAnswers;
 
-    // Settings
-    private int totalQuestions = 10;
-    private String questionType = "multiple"; // "multiple" for MCQ, "boolean" for True/False
+    // High Scores
+    private List<HighScore> highScoreList;
+    private HighScoreAdapter highScoreAdapter;
 
-    // SharedPreferences for storing quiz results
-    private SharedPreferences sharedPreferences;
-    private final String PREFS_NAME = "QuizResults";
-    private final String RESULTS_KEY = "Results";
-
-    // Constants
-    private final String QUIZ_API_URL_BASE = "https://opentdb.com/api.php";
+    // Retrofit API Interface
+    private OpenTriviaAPI openTriviaAPI;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize UI Components
-        startScreen = findViewById(R.id.startScreen);
-        questionScreen = findViewById(R.id.questionScreen);
-        endScreen = findViewById(R.id.endScreen);
+        // Initialize Layouts
+        settingsLayout = findViewById(R.id.settingsLayout);
+        quizLayout = findViewById(R.id.quizLayout);
+        resultLayout = findViewById(R.id.resultLayout);
 
-        startQuizBtn = findViewById(R.id.startQuizBtn);
-        restartQuizBtn = findViewById(R.id.restartQuizBtn);
-        viewResultsBtn = findViewById(R.id.viewResultsBtn);
+        // Initialize Settings Views
+        spinnerCategory = findViewById(R.id.spinnerCategory);
+        spinnerDifficulty = findViewById(R.id.spinnerDifficulty);
+        spinnerQuizType = findViewById(R.id.spinnerQuizType);
+        spinnerNumQuestions = findViewById(R.id.spinnerNumQuestions);
+        buttonStart = findViewById(R.id.buttonStart);
 
-        questionNumber = findViewById(R.id.questionNumber);
-        questionText = findViewById(R.id.questionText);
-        scoreText = findViewById(R.id.scoreText);
-        finalScore = findViewById(R.id.finalScore);
-        errorMessage = findViewById(R.id.errorMessage);
+        // Initialize Quiz Views
         progressBar = findViewById(R.id.progressBar);
+        textTimer = findViewById(R.id.textTimer);
+        textQuestionCount = findViewById(R.id.textQuestionCount);
+        textQuestion = findViewById(R.id.textQuestion);
+        layoutOptions = findViewById(R.id.layoutOptions);
+        buttonNext = findViewById(R.id.buttonNext);
 
-        option1 = findViewById(R.id.option1);
-        option2 = findViewById(R.id.option2);
-        option3 = findViewById(R.id.option3);
-        option4 = findViewById(R.id.option4);
+        // Initialize Result Views
+        textScore = findViewById(R.id.textScore);
+        textDetailedResults = findViewById(R.id.textDetailedResults);
+        recyclerViewHighScores = findViewById(R.id.recyclerViewHighScores);
+        buttonRestart = findViewById(R.id.buttonRestart);
 
-        previousResultsText = findViewById(R.id.previousResultsText);
+        // Initialize High Scores
+        highScoreList = new ArrayList<>();
+        highScoreAdapter = new HighScoreAdapter(highScoreList);
+        recyclerViewHighScores.setLayoutManager(new LinearLayoutManager(this));
+        recyclerViewHighScores.setAdapter(highScoreAdapter);
 
-        // Initialize SharedPreferences
-        sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        // Initialize Retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://opentdb.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
 
-        // Load and display previous results
-        loadPreviousResults();
+        openTriviaAPI = retrofit.create(OpenTriviaAPI.class);
 
-        // Set onClick Listener for Start Quiz Button
-        startQuizBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String numQuestionsStr = ((TextView) findViewById(R.id.numQuestionsInput)).getText().toString().trim();
-                if(numQuestionsStr.isEmpty()){
-                    Toast.makeText(MainActivity.this, "Please enter the number of questions.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+        // Populate Spinners
+        populateCategorySpinner();
+        populateDifficultySpinner();
+        populateQuizTypeSpinner();
+        populateNumQuestionsSpinner();
 
-                try {
-                    int num = Integer.parseInt(numQuestionsStr);
-                    if(num <= 0){
-                        Toast.makeText(MainActivity.this, "Please enter a positive number.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    totalQuestions = num;
-                } catch (NumberFormatException e){
-                    Toast.makeText(MainActivity.this, "Invalid number format.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+        // Initialize User Answers List
+        userAnswers = new ArrayList<>();
 
-                // Get selected question type
-                RadioGroup questionTypeGroup = findViewById(R.id.questionTypeGroup);
-                int selectedId = questionTypeGroup.getCheckedRadioButtonId();
-                if(selectedId == R.id.mcqRadioBtn){
-                    questionType = "multiple";
-                } else {
-                    questionType = "boolean";
-                }
+        // Load High Scores
+        loadHighScores();
 
-                // Start the quiz
-                startScreen.setVisibility(View.GONE);
-                questionScreen.setVisibility(View.VISIBLE);
-                progressBar.setVisibility(View.VISIBLE);
-                // Reset score and index
-                currentQuestionIndex = 0;
-                score = 0;
-                scoreText.setText("Score: 0");
-                // Fetch Quiz Questions
-                new FetchQuizTask().execute(buildQuizApiUrl());
+        // Start Button Click Listener
+        buttonStart.setOnClickListener(v -> {
+            startQuiz();
+        });
+
+        // Next Button Click Listener
+        buttonNext.setOnClickListener(v -> {
+            if (!buttonNext.isEnabled()) return;
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questionsList.size()) {
+                displayQuestion();
+            } else {
+                showResults();
             }
         });
 
-        // Set onClick Listener for Restart Quiz Button
-        restartQuizBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                resetQuiz();
-            }
+        // Restart Button Click Listener
+        buttonRestart.setOnClickListener(v -> {
+            resetQuiz();
         });
-
-        // Set onClick Listener for View Results Button
-        viewResultsBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                displayFinalScore();
-            }
-        });
-
-        // Set onClick Listeners for Answer Options
-        View.OnClickListener answerClickListener = new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Button selectedOption = (Button) view;
-                String selectedAnswer = selectedOption.getText().toString();
-                checkAnswer(selectedAnswer);
-            }
-        };
-
-        option1.setOnClickListener(answerClickListener);
-        option2.setOnClickListener(answerClickListener);
-        option3.setOnClickListener(answerClickListener);
-        option4.setOnClickListener(answerClickListener);
     }
 
-    // Build the API URL based on settings
-    private String buildQuizApiUrl(){
-        return QUIZ_API_URL_BASE + "?amount=" + totalQuestions + "&type=" + questionType;
-    }
+    // Populate Category Spinner
+    private void populateCategorySpinner() {
+        // Default Categories
+        List<String> categories = new ArrayList<>();
+        categories.add("Any Category");
 
-    // AsyncTask to fetch quiz questions from API
-    private class FetchQuizTask extends AsyncTask<String, Void, String> {
-
-        @Override
-        protected String doInBackground(String... params) {
-            String apiUrl = params[0];
-            StringBuilder result = new StringBuilder();
-
-            try {
-                URL url = new URL(apiUrl);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                int responseCode = connection.getResponseCode();
-
-                if(responseCode == HttpURLConnection.HTTP_OK){
-                    BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                    String inputLine;
-
-                    while ((inputLine = in.readLine()) != null){
-                        result.append(inputLine);
-                    }
-                    in.close();
-                } else {
-                    return "Failed to fetch data. Response Code: " + responseCode;
+        // Fetch Categories from API
+        Call<CategoryResponse> call = openTriviaAPI.getCategories();
+        call.enqueue(new Callback<CategoryResponse>() {
+            @Override
+            public void onResponse(Call<CategoryResponse> call, Response<CategoryResponse> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(MainActivity.this, "Failed to load categories", Toast.LENGTH_SHORT).show();
+                    return;
                 }
-
-            } catch (IOException e){
-                e.printStackTrace();
-                return "An error occurred: " + e.getMessage();
+                CategoryResponse categoryResponse = response.body();
+                for (Category cat : categoryResponse.trivia_categories) {
+                    categories.add(cat.name);
+                }
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_item, categories);
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinnerCategory.setAdapter(adapter);
             }
 
-            return result.toString();
+            @Override
+            public void onFailure(Call<CategoryResponse> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "Error loading categories", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // Populate Difficulty Spinner
+    private void populateDifficultySpinner() {
+        List<String> difficulties = new ArrayList<>();
+        difficulties.add("Any Difficulty");
+        difficulties.add("Easy");
+        difficulties.add("Medium");
+        difficulties.add("Hard");
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, difficulties);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerDifficulty.setAdapter(adapter);
+    }
+
+    // Populate Quiz Type Spinner
+    private void populateQuizTypeSpinner() {
+        List<String> quizTypes = new ArrayList<>();
+        quizTypes.add("Multiple Choice");
+        quizTypes.add("True/False");
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, quizTypes);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerQuizType.setAdapter(adapter);
+
+        spinnerQuizType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+
+                if (i == 0) {
+                    selectedQuizType = "multiple";
+                } else {
+                    selectedQuizType = "boolean";
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+                selectedQuizType = "multiple";
+            }
+        });
+    }
+
+    // Populate Number of Questions Spinner
+    private void populateNumQuestionsSpinner() {
+        List<String> numQuestions = new ArrayList<>();
+        numQuestions.add("5");
+        numQuestions.add("10");
+        numQuestions.add("15");
+        numQuestions.add("20");
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, numQuestions);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerNumQuestions.setAdapter(adapter);
+    }
+
+    // Start Quiz
+    private void startQuiz() {
+        // Get Selected Options
+        String category = spinnerCategory.getSelectedItem().toString();
+        String difficulty = spinnerDifficulty.getSelectedItem().toString();
+        String numQ = spinnerNumQuestions.getSelectedItem().toString();
+
+        selectedNumQuestions = Integer.parseInt(numQ);
+
+        // Build API Call
+        String categoryParam = "";
+        if (!category.equals("Any Category")) {
+            categoryParam = "&category=" + getCategoryId(category);
         }
 
-        @Override
-        protected void onPostExecute(String s) {
-            progressBar.setVisibility(View.GONE);
-            if(s.startsWith("An error occurred") || s.startsWith("Failed to fetch")){
-                // Show error message
-                errorMessage.setText(s);
-                errorMessage.setVisibility(View.VISIBLE);
-                questionScreen.setVisibility(View.GONE);
-            } else {
-                try {
-                    JSONObject jsonObject = new JSONObject(s);
-                    int responseCode = jsonObject.getInt("response_code");
-                    if(responseCode == 0){
-                        questionsArray = jsonObject.getJSONArray("results");
-                        displayQuestion();
-                    } else {
-                        errorMessage.setText("No questions available.");
-                        errorMessage.setVisibility(View.VISIBLE);
-                        questionScreen.setVisibility(View.GONE);
-                    }
-                } catch (JSONException e){
-                    e.printStackTrace();
-                    errorMessage.setText("Error parsing data.");
-                    errorMessage.setVisibility(View.VISIBLE);
-                    questionScreen.setVisibility(View.GONE);
+        String difficultyParam = "";
+        if (!difficulty.equals("Any Difficulty")) {
+            difficultyParam = "&difficulty=" + difficulty.toLowerCase();
+        }
+
+        String typeParam = "&type=" + selectedQuizType;
+
+        String apiURL = "api.php?amount=" + selectedNumQuestions + typeParam + categoryParam + difficultyParam;
+
+        // Make API Call
+        Call<QuizResponse> call = openTriviaAPI.getQuestions(apiURL);
+        call.enqueue(new Callback<QuizResponse>() {
+            @Override
+            public void onResponse(Call<QuizResponse> call, Response<QuizResponse> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(MainActivity.this, "Failed to load questions", Toast.LENGTH_SHORT).show();
+                    return;
                 }
+
+                QuizResponse quizResponse = response.body();
+                if (quizResponse.response_code != 0) {
+                    Toast.makeText(MainActivity.this, "No questions available for the selected options", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                questionsList = quizResponse.results;
+                userAnswers = new ArrayList<>(Collections.nCopies(questionsList.size(), ""));
+
+                // Initialize Quiz
+                currentQuestionIndex = 0;
+                score = 0;
+                progressBar.setProgress(0);
+                textQuestionCount.setText("Question 1 of " + questionsList.size());
+                displayQuestion();
+
+                // Switch Layouts
+                settingsLayout.setVisibility(View.GONE);
+                resultLayout.setVisibility(View.GONE);
+                quizLayout.setVisibility(View.VISIBLE);
             }
+
+            @Override
+            public void onFailure(Call<QuizResponse> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "Error loading questions", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // Get Category ID based on Category Name
+    private int getCategoryId(String categoryName) {
+        // For simplicity, hardcode some category IDs
+        // In a real application, you should map category names to their IDs dynamically
+        switch (categoryName) {
+            case "General Knowledge":
+                return 9;
+            case "Entertainment: Books":
+                return 10;
+            case "Entertainment: Film":
+                return 11;
+            case "Science & Nature":
+                return 17;
+            case "Sports":
+                return 21;
+            case "Geography":
+                return 22;
+            case "History":
+                return 23;
+            case "Politics":
+                return 24;
+            case "Art":
+                return 25;
+            case "Celebrities":
+                return 26;
+            case "Animals":
+                return 27;
+            case "Vehicles":
+                return 28;
+            case "Entertainment: Comics":
+                return 29;
+            case "Science: Computers":
+                return 18;
+            case "Entertainment: Musicals & Theatres":
+                return 12;
+            case "Entertainment: Television":
+                return 14;
+            case "Entertainment: Video Games":
+                return 15;
+            case "Entertainment: Board Games":
+                return 16;
+            case "Science: Mathematics":
+                return 19;
+            case "Mythology":
+                return 20;
+            default:
+                return 0;
         }
     }
 
     // Display Current Question
-    private void displayQuestion(){
-        if(currentQuestionIndex < totalQuestions){
-            try {
-                JSONObject currentQuestion = questionsArray.getJSONObject(currentQuestionIndex);
-                String question = currentQuestion.getString("question");
-                String correctAnswer = currentQuestion.getString("correct_answer");
-                JSONArray incorrectAnswers = currentQuestion.getJSONArray("incorrect_answers");
+    private void displayQuestion() {
+        if (currentQuestionIndex >= questionsList.size()) {
+            showResults();
+            return;
+        }
 
-                // Combine correct and incorrect answers
-                String[] allAnswers = new String[incorrectAnswers.length() + 1];
-                for(int i=0; i < incorrectAnswers.length(); i++){
-                    allAnswers[i] = Html.fromHtml(incorrectAnswers.getString(i)).toString();
-                }
-                allAnswers[incorrectAnswers.length()] = Html.fromHtml(correctAnswer).toString();
+        // Reset Options Layout
+        layoutOptions.removeAllViews();
 
-                // Shuffle the answers
-                shuffleArray(allAnswers);
+        QuizQuestion currentQuestion = questionsList.get(currentQuestionIndex);
+        textQuestion.setText(currentQuestion.question);
+        textQuestionCount.setText("Question " + (currentQuestionIndex + 1) + " of " + questionsList.size());
 
-                // Update UI
-                questionNumber.setText("Question " + (currentQuestionIndex + 1) + "/" + totalQuestions);
-                questionText.setText(question);
+        // Shuffle Options
+        List<String> options = new ArrayList<>(currentQuestion.incorrect_answers);
+        options.add(currentQuestion.correct_answer);
+        Collections.shuffle(options);
 
-                option1.setText(allAnswers[0]);
-                option2.setText(allAnswers[1]);
-                option3.setText(allAnswers[2]);
-                option4.setText(allAnswers[3]);
+        // Create Buttons for Options
+        for (String option : options) {
+            Button btnOption = new Button(this);
+            btnOption.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT));
+            btnOption.setText(option);
+            btnOption.setAllCaps(false);
+            btnOption.setTextSize(16);
+            btnOption.setBackgroundResource(android.R.drawable.btn_default);
+            btnOption.setOnClickListener(v -> {
+                selectOption(option, btnOption);
+            });
+            layoutOptions.addView(btnOption);
+        }
 
-            } catch (JSONException e){
-                e.printStackTrace();
-                Toast.makeText(this, "Error displaying question.", Toast.LENGTH_SHORT).show();
-            }
+        // Reset Next Button
+        buttonNext.setEnabled(false);
+
+        // Start Timer
+        startTimer();
+    }
+
+    // Select Option
+    private void selectOption(String selectedOption, Button selectedButton) {
+        // Save User Answer
+        userAnswers.set(currentQuestionIndex, selectedOption);
+
+        // Check if Correct
+        QuizQuestion currentQuestion = questionsList.get(currentQuestionIndex);
+        if (selectedOption.equals(currentQuestion.correct_answer)) {
+            score++;
+            selectedButton.setBackgroundColor(getResources().getColor(android.R.color.holo_green_light));
         } else {
-            endQuiz();
+            selectedButton.setBackgroundColor(getResources().getColor(android.R.color.holo_red_light));
+            // Highlight Correct Answer
+            highlightCorrectAnswer(currentQuestion.correct_answer);
+        }
+
+        // Disable All Options
+        disableAllOptions();
+
+        // Enable Next Button
+        buttonNext.setEnabled(true);
+
+        // Stop Timer
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
         }
     }
 
-    // Check if the selected answer is correct
-    private void checkAnswer(String selectedAnswer){
-        try {
-            JSONObject currentQuestion = questionsArray.getJSONObject(currentQuestionIndex);
-            String correctAnswer = Html.fromHtml(currentQuestion.getString("correct_answer")).toString();
+    // Highlight Correct Answer
+    private void highlightCorrectAnswer(String correctAnswer) {
+        for (int i = 0; i < layoutOptions.getChildCount(); i++) {
+            Button btn = (Button) layoutOptions.getChildAt(i);
+            if (btn.getText().toString().equals(correctAnswer)) {
+                btn.setBackgroundColor(getResources().getColor(android.R.color.holo_green_light));
+                break;
+            }
+        }
+    }
 
-            if(selectedAnswer.equals(correctAnswer)){
-                score++;
-                Toast.makeText(this, "✅ Correct!", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "❌ Wrong! Correct Answer: " + correctAnswer, Toast.LENGTH_LONG).show();
+    // Disable All Option Buttons
+    private void disableAllOptions() {
+        for (int i = 0; i < layoutOptions.getChildCount(); i++) {
+            Button btn = (Button) layoutOptions.getChildAt(i);
+            btn.setEnabled(false);
+        }
+    }
+
+    // Start Timer
+    private void startTimer() {
+        textTimer.setText("Time Left: 30s");
+        countDownTimer = new CountDownTimer(timePerQuestion, 1000) {
+            public void onTick(long millisUntilFinished) {
+                textTimer.setText("Time Left: " + millisUntilFinished / 1000 + "s");
             }
 
-            scoreText.setText("Score: " + score);
-            currentQuestionIndex++;
-            displayQuestion();
+            public void onFinish() {
+                textTimer.setText("Time Left: 0s");
+                // Handle Unanswered Question
+                userAnswers.set(currentQuestionIndex, "No Answer");
+                highlightCorrectAnswer(questionsList.get(currentQuestionIndex).correct_answer);
+                disableAllOptions();
+                buttonNext.setEnabled(true);
+            }
+        }.start();
+    }
 
-        } catch (JSONException e){
-            e.printStackTrace();
-            Toast.makeText(this, "Error checking answer.", Toast.LENGTH_SHORT).show();
+    // Show Results
+    private void showResults() {
+        // Stop Timer if Running
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
         }
-    }
 
-    // Shuffle the answers array
-    private void shuffleArray(String[] array){
-        for(int i=array.length -1; i >0; i--){
-            int index = (int)(Math.random() * (i +1));
-            // Simple swap
-            String temp = array[index];
-            array[index] = array[i];
-            array[i] = temp;
+        // Hide Quiz Layout
+        quizLayout.setVisibility(View.GONE);
+
+        // Show Result Layout
+        resultLayout.setVisibility(View.VISIBLE);
+
+        // Display Score
+        textScore.setText("You scored " + score + " out of " + questionsList.size());
+
+        // Display Detailed Results
+        StringBuilder detailedResults = new StringBuilder();
+        for (int i = 0; i < questionsList.size(); i++) {
+            QuizQuestion q = questionsList.get(i);
+            String userAnswer = userAnswers.get(i);
+            boolean isCorrect = q.correct_answer.equals(userAnswer);
+            detailedResults.append("Question ").append(i + 1).append(": ").append(q.question).append("\n");
+            detailedResults.append("Your answer: ").append(userAnswer).append(isCorrect ? " (Correct)" : " (Incorrect)").append("\n");
+            if (!isCorrect && !userAnswer.equals("No Answer")) {
+                detailedResults.append("Correct answer: ").append(q.correct_answer).append("\n");
+            }
+            detailedResults.append("\n");
         }
+        textDetailedResults.setText(detailedResults.toString());
+
+        // Save High Score
+        saveHighScore();
+
+        // Load High Scores
+        loadHighScores();
     }
 
-    // End the quiz and show final score
-    private void endQuiz(){
-        questionScreen.setVisibility(View.GONE);
-        endScreen.setVisibility(View.VISIBLE);
-        finalScore.setText("Your Score: " + score + "/" + totalQuestions);
-        // Save the result
-        saveQuizResult(score, totalQuestions);
+    // Save High Score to SharedPreferences
+    private void saveHighScore() {
+        HighScore newHighScore = new HighScore();
+        newHighScore.score = score;
+        newHighScore.total = questionsList.size();
+        newHighScore.date = java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
+
+        highScoreList.add(newHighScore);
+
+        // Sort High Scores Descending
+        Collections.sort(highScoreList, (hs1, hs2) -> hs2.score - hs1.score);
+
+        // Keep Top 10
+        if (highScoreList.size() > 10) {
+            highScoreList = highScoreList.subList(0, 10);
+        }
+
+        // Save to SharedPreferences
+        SharedPrefManager.getInstance(this).saveHighScores(highScoreList);
     }
 
-    // Reset the quiz to start over
-    private void resetQuiz(){
-        endScreen.setVisibility(View.GONE);
-        questionScreen.setVisibility(View.VISIBLE);
+    // Load High Scores from SharedPreferences
+    private void loadHighScores() {
+        highScoreList = SharedPrefManager.getInstance(this).getHighScores();
+        highScoreAdapter.setHighScoreList(highScoreList);
+        highScoreAdapter.notifyDataSetChanged();
+    }
+
+    // Reset Quiz
+    private void resetQuiz() {
+        // Reset Variables
         currentQuestionIndex = 0;
         score = 0;
-        scoreText.setText("Score: 0");
-        progressBar.setVisibility(View.VISIBLE);
-        errorMessage.setVisibility(View.GONE);
-        // Fetch new set of questions
-        new FetchQuizTask().execute(buildQuizApiUrl());
+        userAnswers = new ArrayList<>();
+
+        // Hide Result Layout
+        resultLayout.setVisibility(View.GONE);
+
+        // Show Settings Layout
+        settingsLayout.setVisibility(View.VISIBLE);
     }
 
-    // Save quiz result to SharedPreferences
-    private void saveQuizResult(int obtainedScore, int totalQuestions){
-        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-        String newResult = "Score: " + obtainedScore + "/" + totalQuestions + " | " + timestamp;
+    // Retrofit API Interface
+    public interface OpenTriviaAPI {
+        @GET("api_category.php")
+        Call<CategoryResponse> getCategories();
 
-        // Get existing results
-        String existingResults = sharedPreferences.getString(RESULTS_KEY, "");
-        if(existingResults.isEmpty()){
-            existingResults = newResult;
-        } else {
-            existingResults += "\n" + newResult;
-        }
-
-        // Save back to SharedPreferences
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(RESULTS_KEY, existingResults);
-        editor.apply();
-
-        // Update previous results display
-        loadPreviousResults();
+        @GET
+        Call<QuizResponse> getQuestions(@Url String url);
     }
 
-    // Load and display previous results
-    private void loadPreviousResults(){
-        String results = sharedPreferences.getString(RESULTS_KEY, "");
-        if(results.isEmpty()){
-            previousResultsText.setText("No previous results.");
-        } else {
-            previousResultsText.setText(results);
-        }
+    // Data Models
+    public class CategoryResponse {
+        List<Category> trivia_categories;
     }
 
-    // Display final score in a Toast
-    private void displayFinalScore(){
-        Toast.makeText(this, "Your Score: " + score + "/" + totalQuestions, Toast.LENGTH_LONG).show();
+    public class Category {
+        int id;
+        String name;
+    }
+
+    public class QuizResponse {
+        @SerializedName("response_code")
+        int response_code;
+
+        List<QuizQuestion> results;
+    }
+
+    public class QuizQuestion {
+        String category;
+        String type;
+        String difficulty;
+        String question;
+
+        @SerializedName("correct_answer")
+        String correct_answer;
+
+        @SerializedName("incorrect_answers")
+        List<String> incorrect_answers;
     }
 }

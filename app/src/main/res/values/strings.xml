@@ -1,3 +1,14 @@
 <resources>
-    <string name="app_name">quiz</string>
+    <string name="app_name">QuizApp</string>
+    <string name="welcome_message">Welcome to the Random Quiz!</string>
+    <string name="select_category">Select Category:</string>
+    <string name="select_difficulty">Select Difficulty:</string>
+    <string name="select_quiz_type">Select Quiz Type:</string>
+    <string name="number_of_questions">Number of Questions:</string>
+    <string name="start_quiz">Start Quiz</string>
+    <string name="next">Next</string>
+    <string name="your_results">Your Results</string>
+    <string name="you_scored">You scored %1$d out of %2$d</string>
+    <string name="high_scores">High Scores:</string>
+    <string name="restart_quiz">Restart Quiz</string>
 </resources>
