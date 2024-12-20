@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scrollView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F0F0F0"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:id="@+id/mainLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center">
+
+        <!-- App Title -->
+        <TextView
+            android:id="@+id/appTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📝 Quiz App"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:layout_marginBottom="30dp" />
+
+        <!-- Start Screen -->
+        <LinearLayout
+            android:id="@+id/startScreen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="visible">
+
+            <!-- Number of Questions -->
+            <TextView
+                android:id="@+id/numQuestionsLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Number of Questions:"
+                android:textSize="16sp"
+                android:textColor="#333333"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/numQuestionsInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter number of questions"
+                android:inputType="number"
+                android:padding="12dp"
+                android:background="@drawable/edittext_background"
+                android:textColor="#333333"
+                android:textSize="16sp"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Question Type -->
+            <TextView
+                android:id="@+id/questionTypeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Question Type:"
+                android:textSize="16sp"
+                android:textColor="#333333"
+                android:layout_marginBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/questionTypeGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="20dp">
+
+                <RadioButton
+                    android:id="@+id/mcqRadioBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MCQ"
+                    android:checked="true"
+                    android:textSize="16sp"
+                    android:textColor="#333333" />
+
+                <RadioButton
+                    android:id="@+id/tfRadioBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="True/False"
+                    android:layout_marginStart="20dp"
+                    android:textSize="16sp"
+                    android:textColor="#333333" />
+            </RadioGroup>
+
+            <!-- Start Quiz Button -->
+            <Button
+                android:id="@+id/startQuizBtn"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:text="Start Quiz"
+                android:background="#2196F3"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:padding="12dp"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Previous Results -->
+            <TextView
+                android:id="@+id/previousResultsLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Previous Quiz Results:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="10dp" />
+
+            <TextView
+                android:id="@+id/previousResultsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No previous results."
+                android:textSize="16sp"
+                android:textColor="#666666"
+                android:padding="12dp"
+                android:background="#FFFFFF"
+                android:elevation="2dp" />
+
+        </LinearLayout>
+
+        <!-- Progress Indicator -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="10"
+            android:progress="0"
+            android:visibility="gone"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Question Screen -->
+        <LinearLayout
+            android:id="@+id/questionScreen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Question Number -->
+            <TextView
+                android:id="@+id/questionNumber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Question 1/10"
+                android:textSize="18sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="10dp" />
+
+            <!-- Question Text -->
+            <TextView
+                android:id="@+id/questionText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Question will appear here"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Answer Options -->
+            <Button
+                android:id="@+id/option1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Option 1"
+                android:background="#E0E0E0"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/option2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Option 2"
+                android:background="#E0E0E0"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/option3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Option 3"
+                android:background="#E0E0E0"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/option4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Option 4"
+                android:background="#E0E0E0"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Score Display -->
+            <TextView
+                android:id="@+id/scoreText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Score: 0"
+                android:textSize="18sp"
+                android:textColor="#333333"
+                android:layout_gravity="end"
+                android:layout_marginTop="10dp" />
+        </LinearLayout>
+
+        <!-- End Screen -->
+        <LinearLayout
+            android:id="@+id/endScreen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/endTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🎉 Quiz Completed!"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="20dp" />
+
+            <TextView
+                android:id="@+id/finalScore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your Score: 0/10"
+                android:textSize="20sp"
+                android:textColor="#333333"
+                android:layout_marginBottom="30dp" />
+
+            <Button
+                android:id="@+id/restartQuizBtn"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:text="Restart Quiz"
+                android:background="#4CAF50"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:padding="12dp"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/viewResultsBtn"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:text="View Results"
+                android:background="#9C27B0"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:padding="12dp" />
+        </LinearLayout>
+
+        <!-- Error Message -->
+        <TextView
+            android:id="@+id/errorMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Error message"
+            android:textColor="#E53935"
+            android:textSize="16sp"
+            android:visibility="gone"
+            android:layout_marginTop="10dp" />
+
+    </LinearLayout>
+</ScrollView>
