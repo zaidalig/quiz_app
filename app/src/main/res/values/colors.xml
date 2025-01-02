@@ -1,5 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!--
+        Primary Brand Colors
+        These colors represent your app's primary branding.
+    -->
+    <color name="purple_500">#6200EE</color>
+    <color name="purple_700">#3700B3</color>
+    <color name="teal_200">#03DAC5</color>
+    <color name="teal_700">#018786</color>
+    <color name="blue">#2196F3</color>
+    <color name="blue_dark">#1976D2</color>
+
+    <!--
+        Text Colors
+        Ensure readability across different backgrounds.
+    -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray">#9E9E9E</color>
+
+    <!--
+        Button Colors
+        Define colors for various button states.
+    -->
+    <color name="buttonColor">#28a745</color> <!-- Default Button Color (Green) -->
+    <color name="buttonPressedColor">#218838</color> <!-- Button Pressed State (Darker Green) -->
+    <color name="buttonDisabledColor">#6c757d</color> <!-- Button Disabled State (Gray) -->
+    <color name="buttonTextColor">#FFFFFF</color> <!-- Button Text Color (White) -->
+
+    <!--
+        Background and Surface Colors
+        Define the overall background and surfaces like cards.
+    -->
+    <color name="colorBackground">#FFFFFF</color> <!-- White Background -->
+    <color name="colorSurface">#FFFFFF</color> <!-- White Surface (e.g., Cards) -->
+    <color name="colorOnBackground">#000000</color> <!-- Black Text on Background -->
+    <color name="colorOnSurface">#000000</color> <!-- Black Text on Surface -->
+
+    <!--
+        Status Colors
+        Convey statuses and messages.
+    -->
+    <color name="colorError">#dc3545</color> <!-- Red for Errors -->
+    <color name="colorErrorDark">#c82333</color> <!-- Darker Red for Error States -->
+    <color name="colorOnError">#FFFFFF</color> <!-- White text/icons on Error -->
+
+    <color name="colorSuccess">#28a745</color> <!-- Green for Success Messages -->
+    <color name="colorSuccessDark">#218838</color> <!-- Darker Green for Success States -->
+    <color name="colorOnSuccess">#FFFFFF</color> <!-- White text/icons on Success -->
+
+    <color name="colorInfo">#17a2b8</color> <!-- Teal for Informational Messages -->
+    <color name="colorInfoDark">#138496</color> <!-- Darker Teal for Info States -->
+    <color name="colorOnInfo">#FFFFFF</color> <!-- White text/icons on Info -->
+
+    <!--
+        Miscellaneous Colors
+        Additional colors for specific UI components.
+    -->
+    <color name="lightGray">#F5F5F5</color> <!-- Light Gray for Dividers/Backgrounds -->
+    <color name="darkGray">#6c757d</color> <!-- Dark Gray for Text/Icons -->
+    <color name="dividerColor">#e9ecef</color> <!-- Divider Line Color -->
+    <color name="iconColor">#6c757d</color> <!-- Default Icon Color (Gray) -->
+
+    <!--
+        Black and White
+        Useful for specific UI elements.
+    -->
 </resources>

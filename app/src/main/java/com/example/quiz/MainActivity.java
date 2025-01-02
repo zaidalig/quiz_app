@@ -11,6 +11,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
@@ -32,12 +33,16 @@ public class MainActivity extends AppCompatActivity {
 
     // Layout References
     private LinearLayout settingsLayout, quizLayout, resultLayout;
-    private Spinner spinnerCategory, spinnerDifficulty, spinnerQuizType, spinnerNumQuestions;
+    private Spinner spinnerCategory, spinnerDifficulty, spinnerQuizType, spinnerLanguage, spinnerNumQuestions;
     private Button buttonStart, buttonNext, buttonRestart;
     private TextView textQuestion, textTimer, textQuestionCount, textScore, textDetailedResults;
     private ProgressBar progressBar;
     private LinearLayout layoutOptions;
-    private RecyclerView recyclerViewHighScores;
+    private RecyclerView recyclerViewHighScores, recyclerViewBadges;
+
+    // New UI Elements
+    private EditText editTextUserName;
+    private TextView textTotalQuizzes, textAverageScore, textTotalPoints;
 
     // Quiz State Variables
     private List<QuizQuestion> questionsList;
@@ -52,6 +57,10 @@ public class MainActivity extends AppCompatActivity {
     // High Scores
     private List<HighScore> highScoreList;
     private HighScoreAdapter highScoreAdapter;
+
+    // Badges
+    private List<Badge> badgeList;
+    private BadgeAdapter badgeAdapter;
 
     // Retrofit API Interface
     private OpenTriviaAPI openTriviaAPI;
@@ -70,8 +79,10 @@ public class MainActivity extends AppCompatActivity {
         spinnerCategory = findViewById(R.id.spinnerCategory);
         spinnerDifficulty = findViewById(R.id.spinnerDifficulty);
         spinnerQuizType = findViewById(R.id.spinnerQuizType);
+        spinnerLanguage = findViewById(R.id.spinnerLanguage);
         spinnerNumQuestions = findViewById(R.id.spinnerNumQuestions);
         buttonStart = findViewById(R.id.buttonStart);
+        editTextUserName = findViewById(R.id.editTextUserName);
 
         // Initialize Quiz Views
         progressBar = findViewById(R.id.progressBar);
@@ -85,6 +96,10 @@ public class MainActivity extends AppCompatActivity {
         textScore = findViewById(R.id.textScore);
         textDetailedResults = findViewById(R.id.textDetailedResults);
         recyclerViewHighScores = findViewById(R.id.recyclerViewHighScores);
+        recyclerViewBadges = findViewById(R.id.recyclerViewBadges);
+        textTotalQuizzes = findViewById(R.id.textTotalQuizzes);
+        textAverageScore = findViewById(R.id.textAverageScore);
+        textTotalPoints = findViewById(R.id.textTotalPoints);
         buttonRestart = findViewById(R.id.buttonRestart);
 
         // Initialize High Scores
@@ -92,6 +107,12 @@ public class MainActivity extends AppCompatActivity {
         highScoreAdapter = new HighScoreAdapter(highScoreList);
         recyclerViewHighScores.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewHighScores.setAdapter(highScoreAdapter);
+
+        // Initialize Badges
+        badgeList = new ArrayList<>();
+        badgeAdapter = new BadgeAdapter(badgeList);
+        recyclerViewBadges.setLayoutManager(new LinearLayoutManager(this));
+        recyclerViewBadges.setAdapter(badgeAdapter);
 
         // Initialize Retrofit
         Retrofit retrofit = new Retrofit.Builder()
@@ -105,16 +126,31 @@ public class MainActivity extends AppCompatActivity {
         populateCategorySpinner();
         populateDifficultySpinner();
         populateQuizTypeSpinner();
+        populateLanguageSpinner();
         populateNumQuestionsSpinner();
 
         // Initialize User Answers List
         userAnswers = new ArrayList<>();
 
-        // Load High Scores
+        // Load High Scores and Badges
         loadHighScores();
+        loadBadges();
+
+        // Load User Name
+        String savedUserName = SharedPrefManager.getInstance(this).getUserName();
+        editTextUserName.setText(savedUserName);
+
+        // Load Progress
+        displayProgress();
 
         // Start Button Click Listener
         buttonStart.setOnClickListener(v -> {
+            String userName = editTextUserName.getText().toString().trim();
+            if (userName.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Please enter your name", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            SharedPrefManager.getInstance(this).saveUserName(userName);
             startQuiz();
         });
 
@@ -207,6 +243,21 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Populate Language Spinner
+    private void populateLanguageSpinner() {
+        List<String> languages = new ArrayList<>();
+        languages.add("Any Language");
+        languages.add("Python");
+        languages.add("Java");
+        languages.add("C++");
+        languages.add("JavaScript");
+        // Add more languages as needed
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, languages);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerLanguage.setAdapter(adapter);
+    }
+
     // Populate Number of Questions Spinner
     private void populateNumQuestionsSpinner() {
         List<String> numQuestions = new ArrayList<>();
@@ -226,6 +277,7 @@ public class MainActivity extends AppCompatActivity {
         String category = spinnerCategory.getSelectedItem().toString();
         String difficulty = spinnerDifficulty.getSelectedItem().toString();
         String numQ = spinnerNumQuestions.getSelectedItem().toString();
+        String language = spinnerLanguage.getSelectedItem().toString();
 
         selectedNumQuestions = Integer.parseInt(numQ);
 
@@ -242,7 +294,15 @@ public class MainActivity extends AppCompatActivity {
 
         String typeParam = "&type=" + selectedQuizType;
 
-        String apiURL = "api.php?amount=" + selectedNumQuestions + typeParam + categoryParam + difficultyParam;
+        String languageParam = "";
+        if (!language.equals("Any Language")) {
+            // Assuming language is handled by the API or your own question source
+            // Adjust the parameter based on actual API capabilities
+            // For demonstration, we'll append it but it may not affect the OpenTriviaAPI
+            languageParam = "&language=" + language.toLowerCase();
+        }
+
+        String apiURL = "api.php?amount=" + selectedNumQuestions + typeParam + categoryParam + difficultyParam + languageParam;
 
         // Make API Call
         Call<QuizResponse> call = openTriviaAPI.getQuestions(apiURL);
@@ -267,6 +327,7 @@ public class MainActivity extends AppCompatActivity {
                 currentQuestionIndex = 0;
                 score = 0;
                 progressBar.setProgress(0);
+                progressBar.setMax(questionsList.size());
                 textQuestionCount.setText("Question 1 of " + questionsList.size());
                 displayQuestion();
 
@@ -454,8 +515,9 @@ public class MainActivity extends AppCompatActivity {
         // Show Result Layout
         resultLayout.setVisibility(View.VISIBLE);
 
-        // Display Score
-        textScore.setText("You scored " + score + " out of " + questionsList.size());
+        // Display User Name and Score
+        String userName = SharedPrefManager.getInstance(this).getUserName();
+        textScore.setText(userName + ", you scored " + score + " out of " + questionsList.size());
 
         // Display Detailed Results
         StringBuilder detailedResults = new StringBuilder();
@@ -471,6 +533,25 @@ public class MainActivity extends AppCompatActivity {
             detailedResults.append("\n");
         }
         textDetailedResults.setText(detailedResults.toString());
+
+        // Increment total quizzes
+        SharedPrefManager.getInstance(this).incrementTotalQuizzes();
+
+        // Add points based on score
+        SharedPrefManager.getInstance(this).addPoints(score);
+
+        // Award badges based on updated total quizzes and points
+        awardBadges();
+
+        // Save badges
+        saveBadges();
+
+        // Update badge RecyclerView
+        badgeAdapter.setBadgeList(badgeList);
+        badgeAdapter.notifyDataSetChanged();
+
+        // Display progress
+        displayProgress();
 
         // Save High Score
         saveHighScore();
@@ -507,6 +588,18 @@ public class MainActivity extends AppCompatActivity {
         highScoreAdapter.notifyDataSetChanged();
     }
 
+    // Load Badges from SharedPreferences
+    private void loadBadges() {
+        badgeList = SharedPrefManager.getInstance(this).getBadges();
+        badgeAdapter.setBadgeList(badgeList);
+        badgeAdapter.notifyDataSetChanged();
+    }
+
+    // Save Badges to SharedPreferences
+    private void saveBadges() {
+        SharedPrefManager.getInstance(this).saveBadges(badgeList);
+    }
+
     // Reset Quiz
     private void resetQuiz() {
         // Reset Variables
@@ -519,6 +612,54 @@ public class MainActivity extends AppCompatActivity {
 
         // Show Settings Layout
         settingsLayout.setVisibility(View.VISIBLE);
+    }
+
+    // Implement badge awarding logic
+    private void awardBadges() {
+        int totalQuizzes = SharedPrefManager.getInstance(this).getTotalQuizzes();
+        int totalHighScores = SharedPrefManager.getInstance(this).getHighScores().size();
+        int totalPoints = SharedPrefManager.getInstance(this).getTotalPoints();
+
+        // Example Criteria
+        if (totalQuizzes >= 5 && !hasBadge("Beginner")) {
+            addBadge("Beginner", "Completed 5 quizzes.");
+        }
+        if (totalHighScores >= 10 && !hasBadge("Intermediate")) {
+            addBadge("Intermediate", "Achieved high scores in 10 quizzes.");
+        }
+        if (totalQuizzes >= 20 && !hasBadge("Expert")) {
+            addBadge("Expert", "Completed 20 quizzes.");
+        }
+        // Add more badge criteria as needed
+    }
+
+    // Check if a badge already exists
+    private boolean hasBadge(String badgeName) {
+        for (Badge badge : badgeList) {
+            if (badge.name.equals(badgeName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Add a new badge
+    private void addBadge(String name, String description) {
+        String dateEarned = java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
+        Badge newBadge = new Badge(name, description, dateEarned);
+        badgeList.add(newBadge);
+        Toast.makeText(this, "New Badge Earned: " + name, Toast.LENGTH_LONG).show();
+    }
+
+    // Implement displayProgress()
+    private void displayProgress() {
+        int totalQuizzes = SharedPrefManager.getInstance(this).getTotalQuizzes();
+        float averageScore = SharedPrefManager.getInstance(this).getAverageScore();
+        int totalPoints = SharedPrefManager.getInstance(this).getTotalPoints();
+
+        textTotalQuizzes.setText("Total Quizzes Taken: " + totalQuizzes);
+        textAverageScore.setText(String.format("Average Score: %.2f", averageScore));
+        textTotalPoints.setText("Total Points Earned: " + totalPoints);
     }
 
     // Retrofit API Interface

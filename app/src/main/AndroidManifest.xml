@@ -15,6 +15,9 @@
         android:theme="@style/Theme.Quiz"
         tools:targetApi="31">
         <activity
+            android:name=".item_badge"
+            android:exported="false" />
+        <activity
             android:name=".item_high_score"
             android:exported="false" />
         <activity

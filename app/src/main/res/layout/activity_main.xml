@@ -40,6 +40,21 @@
                 android:layout_gravity="center"
                 android:layout_marginBottom="24dp" />
 
+            <!-- User Name Input -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Enter Your Name:"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/editTextUserName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Your Name"
+                android:layout_marginBottom="16dp" />
+
             <!-- Category Selector -->
             <TextView
                 android:layout_width="wrap_content"
@@ -78,6 +93,20 @@
 
             <Spinner
                 android:id="@+id/spinnerQuizType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Programming Language Selector -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select Programming Language:"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp" />
+
+            <Spinner
+                android:id="@+id/spinnerLanguage"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp" />
@@ -226,6 +255,49 @@
                 android:textSize="16sp"
                 android:layout_marginBottom="16dp" />
 
+            <!-- Badges Section -->
+            <TextView
+                android:id="@+id/textBadgesTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your Badges:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerViewBadges"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Progress Section -->
+            <TextView
+                android:id="@+id/textTotalQuizzes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Total Quizzes Taken: 0"
+                android:textSize="16sp"
+                android:layout_marginTop="8dp" />
+
+            <TextView
+                android:id="@+id/textAverageScore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Average Score: 0.0"
+                android:textSize="16sp"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/textTotalPoints"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Total Points Earned: 0"
+                android:textSize="16sp"
+                android:layout_marginTop="4dp" />
+
+            <!-- High Scores Section -->
             <TextView
                 android:id="@+id/textHighScoresTitle"
                 android:layout_width="wrap_content"
@@ -233,6 +305,7 @@
                 android:text="High Scores:"
                 android:textSize="18sp"
                 android:textStyle="bold"
+                android:layout_marginTop="16dp"
                 android:layout_marginBottom="8dp" />
 
             <androidx.recyclerview.widget.RecyclerView
@@ -241,6 +314,7 @@
                 android:layout_height="200dp"
                 android:layout_marginBottom="16dp" />
 
+            <!-- Restart Button -->
             <Button
                 android:id="@+id/buttonRestart"
                 android:layout_width="match_parent"
